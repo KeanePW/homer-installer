@@ -34,7 +34,7 @@ Supported OS:
 ### Run & Install:
 Execute the following command and follow the interactive prompts to install:
 ```
-bash <( curl -s https://cdn.rawgit.com/sipcapture/homer-installer/master/homer_installer.sh )
+bash <( curl -s https://raw.githubusercontent.com/KeanePW/homer-installer/master/homer_installer.sh )
 ```
 
 
