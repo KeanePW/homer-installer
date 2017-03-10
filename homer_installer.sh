@@ -90,6 +90,9 @@ if  [ "$(id -u)" != "0" ]; then
   exit 1
 fi
 
+# Default on Digital Ocean Debian: root@debian-512mb-lon1-01:~# echo $PATH
+# /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
 PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin
 
 echo "OS: Dectecting System...."
@@ -151,7 +154,7 @@ case $DIST in
 		apt-get update -qq
 		apt-get install --no-install-recommends --no-install-suggests -yqq ca-certificates apache2 libapache2-mod-php5 php5 php5-cli php5-gd php-pear php5-dev php5-mysql php5-json php-services-json git wget pwgen
 		#enable apache mod_php and mod_rewrite
-		a2enmod php5
+		a2enmod php5	
 		a2enmod rewrite 
 	        # Generate Certificates if not present
 	        if [ ! -f "/etc/ssl/localcerts/apache.key" ]; then
@@ -161,7 +164,6 @@ case $DIST in
 	        fi
 	        # activate ssl
 	        a2enmod ssl
-
 
 		# MySQL
 		apt-get install -y perl libdbi-perl libclass-dbi-mysql-perl --no-install-recommends
@@ -174,7 +176,6 @@ case $DIST in
 		echo "deb-src http://deb.kamailio.org/kamailio44 jessie main" >> /etc/apt/sources.list.d/kamailio.list
 		apt-get update && apt-get install -f -yqq kamailio rsyslog kamailio-outbound-modules kamailio-geoip-modules kamailio-sctp-modules kamailio-tls-modules kamailio-websocket-modules kamailio-utils-modules kamailio-mysql-modules kamailio-extra-modules geoip-database geoip-database-extra
 
-
 		cd /usr/src/
 		if [ ! -d "/usr/src/homer-api" ]; then
 		   echo "GIT: Cloning Homer components..."
@@ -182,6 +183,10 @@ case $DIST in
 			git clone --depth 1 https://github.com/sipcapture/homer-ui.git homer-ui
 			git clone --depth 1 https://github.com/QXIP/homer-docker.git homer-docker
 			chmod +x /usr/src/homer-api/scripts/*
+			# Is it a good idea to place in /opt? What about a homer folder?
+			# root@debian-512mb-lon1-01:/usr/src# ls /usr/src/homer-api/scripts/
+			# homer_mysql_remove_partitions.pl  homer_mysql_rotate.pl  homer_partremove  homer_rotate  old  pgsql  rotation.ini  sipcapture.crontab
+			# cp /usr/src/homer-api/scripts/* /opt/
 			cp /usr/src/homer-api/scripts/* /opt/
 		else
 			echo "GIT: Updating Homer components..."
@@ -192,16 +197,18 @@ case $DIST in
 			chmod +x /usr/src/homer-api/scripts/*
 			cp /usr/src/homer-api/scripts/* /opt/
 		fi
-
-			cp -R /usr/src/homer-ui/* $WEBROOT/
-			cp -R /usr/src/homer-api/api $WEBROOT/
-			chown -R www-data:www-data $WEBROOT/store/
-			chmod -R 0775 $WEBROOT/store/dashboard
+			# Removed trailing slash: cp -R /usr/src/homer-ui/* $WEBROOT/
+			cp -R /usr/src/homer-ui/* $WEBROOT
+			cp -R /usr/src/homer-api/api $WEBROOT
+			# root@debian-512mb-lon1-01:/usr/src# echo "$WEBROOT"store
+			# /var/www/html/store
+			chown -R www-data:www-data "$WEBROOT"store
+			chmod -R 0775 "$WEBROOT"store/dashboard
 
 			SQL_LOCATION=/usr/src/homer-api/sql
 
-			cp /usr/src/homer-docker/data/configuration.php $WEBROOT/api/configuration.php
-			cp /usr/src/homer-docker/data/preferences.php $WEBROOT/api/preferences.php
+			cp /usr/src/homer-docker/data/configuration.php "$WEBROOT"api/configuration.php
+			cp /usr/src/homer-docker/data/preferences.php "$WEBROOT"api/preferences.php
 			cp /usr/src/homer-docker/data/vhost.conf /etc/apache2/sites-enabled/000-default.conf
 
 			cp /usr/src/homer-docker/data/kamailio.cfg /etc/kamailio/kamailio.cfg
@@ -227,13 +234,16 @@ case $DIST in
 		  echo "Enter the SQL User details for the HOMER Client:"
 	   	  echo "MYSQL Homer User: (empty for default)"
 	   	  read sqlhomeruser
+		  echo "You entered: " $sqlhomeruser
 	   	  echo "MYSQL Homer Pass: (empty for randomized)"
-	   	  stty -echo
+	   	  #stty -echo
 	   	  read sqlhomerpassword
+		  echo "You entered: " $sqlhomerpassword
 		  echo "WARNING: Choose a password for MySQL ROOT account (empty by default!)"
-	   	  stty -echo
+	   	  #stty -echo
 	   	  read sqlpassword
-	   	  stty echo
+		  echo "You entered: " $sqlpassword
+	   	  #stty echo
 
 		  if [ "$sqlhomeruser" = "" ] ; then
    			echo "Using default username..."
