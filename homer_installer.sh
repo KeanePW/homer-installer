@@ -5,7 +5,7 @@
 # --------------------------------------------------------------------------------
 # This script is only intended as a quickstart to test and get familiar with HOMER.
 # It is not suitable for high-traffic nodes, complex capture scenarios, clusters.
-# The HOW-TO should be ALWAYS followed for a fully controlled, manual installation!
+# The HOW-TO should ALWAYS be followed for a fully controlled, manual installation!
 # --------------------------------------------------------------------------------
 #
 #  Copyright notice:
@@ -577,8 +577,8 @@ echo "                                                             "
 echo "*************************************************************"
 echo
 echo "     * Verify configuration for HOMER-API:"
-echo "         '$WEBROOT/api/configuration.php'"
-echo "         '$WEBROOT/api/preferences.php'"
+echo "         '$WEBROOTapi/configuration.php'"
+echo "         '$WEBROOTapi/preferences.php'"
 echo
 echo "     * Verify capture settings for Homer/Kamailio:"
 echo "         '$REAL_PATH/etc/kamailio/kamailio.cfg'"
@@ -588,7 +588,7 @@ echo "         '$REAL_PATH/sbin/kamctl start|stop'"
 echo
 echo "     * Access HOMER UI:"
 echo "         http://$LOCAL_IP or http://$LOCAL_IP"
-echo "         [default: admin/test123 or test1234]"
+echo "     [default: admin/test123 for debian or test1234 fpr centos]"
 echo
 echo "     * Send HEP/EEP Encapsulated Packets:"
 echo "         hep://$LOCAL_IP:$LISTEN_PORT"
