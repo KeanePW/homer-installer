@@ -40,15 +40,21 @@
 #####################################################################
 
 # HOMER Options, defaults
-DB_USER=homer_user
-DB_PASS=homer_password
+#DB_USER=homer_user
+#DB_PASS=homer_password
+DB_USER=homer
+DB_PASS=homer
 DB_HOST="127.0.0.1"
 LISTEN_PORT=9060
-LOCAL_IP=$(ifconfig | sed -En 's/127.0.0.1//;s/.*inet (addr:)?(([0-9]*\.){3}[0-9]*).*/\2/p')
+# LOCAL_IP=$(ifconfig | sed -En 's/127.0.0.1//;s/.*inet (addr:)?(([0-9]*\.){3}[0-9]*).*/\2/p')
+# That is getting: 178.62.33.147 10.131.21.203
+LOCAL_IP=$(ifconfig eth0 | sed -En 's/127.0.0.1//;s/.*inet (addr:)?(([0-9]*\.){3}[0-9]*).*/\2/p')
 
 # HOMER MySQL Options, defaults
-sqluser=root
-sqlpassword=secret
+#sqluser=root
+#sqlpassword=secret
+sqluser=homer
+sqlpassword=homer
 
 #### NO CHANGES BELOW THIS LINE! 
 
@@ -63,7 +69,7 @@ tee < ${logfile}.pipe $logfile &
 exec &> ${logfile}.pipe
 rm ${logfile}.pipe
 
-clear; 
+clear
 echo "**************************************************************"
 echo "                                                              "
 echo "      ,;;;;;,       HOMER SIP CAPTURE (http://sipcapture.org) "
@@ -124,7 +130,6 @@ else
     exit 1
 fi
 
-
 read -p "This script expect a Vanilla OS and will override settings. Continue (y/N)? " choice
 case "$choice" in 
   y|Y ) echo "Proceeding...";;
@@ -154,8 +159,8 @@ case $DIST in
 		apt-get update -qq
 		apt-get install --no-install-recommends --no-install-suggests -yqq ca-certificates apache2 libapache2-mod-php5 php5 php5-cli php5-gd php-pear php5-dev php5-mysql php5-json php-services-json git wget pwgen
 		#enable apache mod_php and mod_rewrite
-		a2enmod php5	
-		a2enmod rewrite 
+		a2enmod php5
+		a2enmod rewrite
 	        # Generate Certificates if not present
 	        if [ ! -f "/etc/ssl/localcerts/apache.key" ]; then
 	          mkdir -p /etc/ssl/localcerts
@@ -215,6 +220,10 @@ case $DIST in
 			chmod 775 /etc/kamailio/kamailio.cfg
 
 			(crontab -l ; echo "30 3 * * * /opt/homer_rotate >> /var/log/cron.log 2>&1") | sort - | uniq - | crontab -
+			
+			# Output the updated crontab 
+			# 30 3 * * * /opt/homer_rotate >> /var/log/cron.log 2>&1
+			(crontab -l)
 
 		# Handy-dandy MySQL run function
 		function MYSQL_RUN () {
@@ -276,6 +285,7 @@ case $DIST in
 		  # patch password for centos
 		  # perl -p -i -e "s/test123/test1234/" $SQL_LOCATION/schema_configuration.sql
 		  
+		  # Added sql password change to debian (previously it was just for centos)
 		  perl -p -i -e "s/test123/test1234/" $SQL_LOCATION/schema_configuration.sql
 		  perl -p -i -e "s/123test/1234test/" $SQL_LOCATION/schema_configuration.sql
 		  
@@ -283,14 +293,17 @@ case $DIST in
 		  mysql -u "$sqluser" homer_statistic < $SQL_LOCATION/schema_statistic.sql
 
 		  # echo "Creating local DB Node..."
-		  mysql -u "$sqluser" homer_configuration -e "INSERT INTO node VALUES(1,'mysql','homer_data','3306','"$DB_USER"','"$DB_PASS"','sip_capture','node1', 1);"
+		  # mysql -u "$sqluser" homer_configuration -e "INSERT INTO node VALUES(1,'mysql','homer_data','3306','"$DB_USER"','"$DB_PASS"','sip_capture','node1', 1);"
+		  # ERROR 1062 (23000) at line 1: Duplicate entry '1' for key 'PRIMARY'
+		  mysql -u "$sqluser" homer_configuration -e "UPDATE node SET dbusername='"$DB_USER"', dbpassword='"$DB_PASS"', name='node1' WHERE id=1;"
+		  # Test:  mysql -u "$sqluser" homer_configuration -e "SELECT * from node;"
 
-		  echo 'Setting root password....'
+		  echo 'Setting root password...'
 		  mysql -u "$sqluser" -e "GRANT ALL ON *.* TO '$DB_USER'@'%' IDENTIFIED BY '$DB_PASS'; FLUSH PRIVILEGES;";
 		  if [ "$sqlhomerpassword" = "" ] ; then
 			echo "WARNING! MySQL root password is empty and insecure!"
 		  else 
-		  	mysql -u "$sqluser" -e "SET PASSWORD = PASSWORD('$sqlpassword');" 
+		  	mysql -u "$sqluser" -e "SET PASSWORD = PASSWORD('$sqlpassword');"
 		  fi
 
 		  echo "Homer initial data load complete" > $DATADIR/.homer_initialized
@@ -302,7 +315,7 @@ case $DIST in
 
 		# HOMER API CONFIG
 		echo "Patching Homer configuration..."
-		PATH_HOMER_CONFIG=$WEBROOT/api/configuration.php
+		PATH_HOMER_CONFIG="$WEBROOT"api/configuration.php
 		chmod 775 $PATH_HOMER_CONFIG
 
 		# Patch rotation script auth
@@ -316,16 +329,20 @@ case $DIST in
 		perl -p -i -e "s/\{\{ DB_HOST \}\}/$DB_HOST/" $PATH_HOMER_CONFIG
 		perl -p -i -e "s/\{\{ DB_USER \}\}/$DB_USER/" $PATH_HOMER_CONFIG
 		# Set Permissions for webapp
-		mkdir $WEBROOT/api/tmp
-		chmod -R 0777 $WEBROOT/api/tmp/
-		chmod -R 0775 $WEBROOT/store/dashboard*
+		mkdir "$WEBROOT"api/tmp
+		chmod -R 0777 "$WEBROOT"api/tmp/
+		chmod -R 0775 "$WEBROOT"store/dashboard*
 
 		# Reconfigure SQL rotation
     		export PATH_ROTATION_SCRIPT=/opt/homer_rotate
     		chmod 775 $PATH_ROTATION_SCRIPT
     		chmod +x $PATH_ROTATION_SCRIPT
-    		perl -p -i -e "s/homer_user/$sqlhomeruser/" $PATH_ROTATION_SCRIPT
-    		perl -p -i -e "s/homer_password/$sqlhomerpassword/" $PATH_ROTATION_SCRIPT
+    		
+		# root@debian-512mb-lon1-01:~# echo $PATH_ROTATION_SCRIPT
+		# /opt/homer_rotate
+		# We have already done the following a few lines above...
+		#perl -p -i -e "s/homer_user/$sqlhomeruser/" $PATH_ROTATION_SCRIPT
+    		#perl -p -i -e "s/homer_password/$sqlhomerpassword/" $PATH_ROTATION_SCRIPT
     		# Init rotation
     		/opt/homer_rotate > /dev/null 2>&1
 
@@ -571,9 +588,8 @@ case $DIST in
 	   ;;
 esac
 
-
 # Install Complete
-#clear
+clear
 echo "*************************************************************"
 echo "      ,;;;;,                                                 "
 echo "     ;;;;;;;;.     Congratulations! HOMER has been installed!"
@@ -581,7 +597,7 @@ echo "   ;;;;;;;;;;;;                                              "
 echo "  ;;;;  ;;  ;;;;   <--------------- INVITE ---------------   "
 echo "  ;;;;  ;;  ;;;;    --------------- 200 OK --------------->  "
 echo "  ;;;;  ..  ;;;;                                             " 
-echo "  ;;;;      ;;;;   Your system should be now ready to rock!"
+echo "  ;;;;  GK  ;;;;   Your system should be now ready to rock!"
 echo "  ;;;;  ;;  ;;;;   Please verify/complete the configuration  "
 echo "  ,;;;  ;;  ;;;;   files generated by the installer below.   "
 echo "   ;;;;;;;;;;;;                                              "
@@ -591,31 +607,21 @@ echo "                                                             "
 echo "*************************************************************"
 echo
 echo "     * Verify configuration for HOMER-API:"
-echo "         '$WEBROOTapi/configuration.php'"
-echo "         '$WEBROOTapi/preferences.php'"
+echo "         '"$WEBROOT"api/configuration.php'"
+echo "         '"$WEBROOT"api/preferences.php'"
 echo
 echo "     * Verify capture settings for Homer/Kamailio:"
-echo "         '$REAL_PATH/etc/kamailio/kamailio.cfg'"
+echo "         '"$REAL_PATH"/etc/kamailio/kamailio.cfg'"
 echo
 echo "     * Start/stop Homer SIP Capture:"
-echo "         '$REAL_PATH/sbin/kamctl start|stop'"
+echo "         '"$REAL_PATH"/sbin/kamctl start|stop'"
 echo
 echo "     * Access HOMER UI:"
-# echo "         http://$LOCAL_IP or http://$LOCAL_IP"
-# echo "     [default: admin/test123 for debian or test1234 fpr centos]"
-echo "         http://$LOCAL_IP[0]"
+echo "         http://$LOCAL_IP"
 echo "         [default: admin/test1234]"
 echo
 echo "     * Send HEP/EEP Encapsulated Packets:"
-# echo "         hep://$LOCAL_IP:$LISTEN_PORT"
-echo "         hep://$LOCAL_IP[0]:$LISTEN_PORT"
-
-#for var in "${$LOCAL_IP[@]}"
-#do
-  # echo "${var}"
-#  echo "         hep://$var:$LISTEN_PORT"
-#done
-
+echo "         hep://$LOCAL_IP:$LISTEN_PORT"
 echo
 echo "**************************************************************"
 echo
