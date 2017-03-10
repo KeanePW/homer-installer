@@ -67,7 +67,7 @@ clear;
 echo "**************************************************************"
 echo "                                                              "
 echo "      ,;;;;;,       HOMER SIP CAPTURE (http://sipcapture.org) "
-echo "     ;;;;;;;;;.     Single-Node Auto-Installer (beta $VERSION)"
+echo "     ;;;;;;;;;.     Single-Node Auto-Installer (GK $VERSION)"
 echo "   ;;;;;;;;;;;;;                                              "
 echo "  ;;;;  ;;;  ;;;;   <--------------- INVITE ---------------   "
 echo "  ;;;;  ;;;  ;;;;    --------------- 200 OK --------------->  "
@@ -275,6 +275,10 @@ case $DIST in
 		  mysql -u "$sqluser" homer_data < $SQL_LOCATION/schema_data.sql
 		  # patch password for centos
 		  # perl -p -i -e "s/test123/test1234/" $SQL_LOCATION/schema_configuration.sql
+		  
+		  perl -p -i -e "s/test123/test1234/" $SQL_LOCATION/schema_configuration.sql
+		  perl -p -i -e "s/123test/1234test/" $SQL_LOCATION/schema_configuration.sql
+		  
 		  mysql -u "$sqluser" homer_configuration < $SQL_LOCATION/schema_configuration.sql
 		  mysql -u "$sqluser" homer_statistic < $SQL_LOCATION/schema_statistic.sql
 
@@ -597,11 +601,21 @@ echo "     * Start/stop Homer SIP Capture:"
 echo "         '$REAL_PATH/sbin/kamctl start|stop'"
 echo
 echo "     * Access HOMER UI:"
-echo "         http://$LOCAL_IP or http://$LOCAL_IP"
-echo "     [default: admin/test123 for debian or test1234 fpr centos]"
+# echo "         http://$LOCAL_IP or http://$LOCAL_IP"
+# echo "     [default: admin/test123 for debian or test1234 fpr centos]"
+echo "         http://$LOCAL_IP[0]"
+echo "         [default: admin/test1234]"
 echo
 echo "     * Send HEP/EEP Encapsulated Packets:"
-echo "         hep://$LOCAL_IP:$LISTEN_PORT"
+# echo "         hep://$LOCAL_IP:$LISTEN_PORT"
+echo "         hep://$LOCAL_IP[0]:$LISTEN_PORT"
+
+#for var in "${$LOCAL_IP[@]}"
+#do
+  # echo "${var}"
+#  echo "         hep://$var:$LISTEN_PORT"
+#done
+
 echo
 echo "**************************************************************"
 echo
